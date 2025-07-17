@@ -8,38 +8,49 @@ from datetime import datetime
 import traceback
 import numpy as np
 
-# Import the SQLAlchemy models
 from models import generate_meddra_file_mappings
 
-# Load environment variables for database connection
 load_dotenv()
 
-# Dictionary mapping file names to model classes and their columns
 MEDDRA_FILE_MAPPINGS = generate_meddra_file_mappings()
-# MEDDRA_FILE_MAPPINGS = {
-#     'llt.asc': {
-#         'model': MeddraLowLevelTerm,
-#         'columns': [
-#             'llt_code', 'llt_name', 'pt_code', 
-#             'llt_whoart_code', 'llt_harts_code', 'llt_costart_sym',
-#             'llt_icd9_code', 'llt_icd9cm_code', 'llt_icd10_code',
-#             'llt_currency', 'llt_jart_code', 'null_field'
-#         ]
-#     },
-#     'pt.asc': {
-#         'model': MeddraPrefTerm,
-#         'columns': [
-#             'pt_code', 'pt_name', 'null_field', 'pt_soc_code',
-#             'pt_whoart_code', 'pt_harts_code', 'pt_costart_sym',
-#             'pt_icd9_code', 'pt_icd9cm_code', 'pt_icd10_code',
-#             'pt_jart_code'
-#         ]
-#     },
-#     # Add other file mappings as needed
-# }
 
-def process_meddra_file(file_path, file_type, db_url, version, language, batch_size=5000):
-    """Process a MedDRA file and load it into the database"""
+def process_meddra_files(folder_path: str, db_url: str, version: float, language: str, batch_size: int = 5000):
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith('.asc'):
+            file_path = os.path.join(folder_path, file_name)
+
+            process_meddra_file(
+                file_path=file_path,
+                file_type=file_name,
+                db_url=db_url,
+                version=version,
+                language=language,
+                batch_size=batch_size
+            )
+
+def process_meddra_file(
+    file_path: str, 
+    file_type: str,
+    db_url: str, 
+    version: float,
+    language: str,
+    batch_size=5000
+):
+    """
+    Processes and loads a MedDRA-formatted file into a database in batches.
+    Args:
+        file_path (str): Path to the MedDRA file to be processed.
+        file_type (str): Type of MedDRA file (must be a key in MEDDRA_FILE_MAPPINGS).
+        db_url (str): SQLAlchemy-compatible database URL for data insertion.
+        version (float): MedDRA version to associate with the records.
+        language (str): Language code for the records.
+        batch_size (int, optional): Number of records to process per batch. Defaults to 5000.
+    Returns:
+        None
+    Raises:
+        Prints error messages for unsupported file types or batch loading errors.
+        Raises and prints traceback for exceptions during batch processing.
+    """
     if file_type not in MEDDRA_FILE_MAPPINGS:
         print(f"Error: Unsupported file type '{file_type}'")
         return
@@ -51,11 +62,9 @@ def process_meddra_file(file_path, file_type, db_url, version, language, batch_s
     engine = create_engine(db_url)
     Session = sessionmaker(bind=engine)
     
-    # Count total lines for progress reporting
     with open(file_path, 'r', encoding='latin1') as f:
         total_lines = sum(1 for _ in f)
     
-    # Process file in batches
     batch_count = 0
     records_count = 0
     
@@ -69,6 +78,7 @@ def process_meddra_file(file_path, file_type, db_url, version, language, batch_s
         index_col=False,
     ):
         df_chunk = df_chunk.replace({np.nan: None})
+        
         batch_count += 1
         
         for col in df_chunk.columns:
@@ -114,23 +124,43 @@ def process_meddra_file(file_path, file_type, db_url, version, language, batch_s
 
 def main():
     parser = argparse.ArgumentParser(description='Load MedDRA files into the database')
-    parser.add_argument('--file', required=True, help='Path to the MedDRA file')
-    parser.add_argument('--type', required=True, choices=MEDDRA_FILE_MAPPINGS.keys(), help='Type of MedDRA file')
+    parser.add_argument('--file-path', required=False, help='Path to the MedDRA file to be processed. Optional if you want to process specific files.')
+    parser.add_argument('--folder-path', required=False, help='Path where .asc files are located')
     parser.add_argument('--version', type=float, default=28.0, help='MedDRA version (default: 28.0)')
     parser.add_argument('--language', default='en', help='Language code (default: en)')
     parser.add_argument('--batch-size', type=int, default=5000, help='Batch size for processing (default: 5000)')
     
     args = parser.parse_args()
-    
-    # Database connection URL from environment variables
     db_url = os.getenv("DATABASE_URL")
+    
+    if not args.file_path and not args.folder_path:
+        print("Error: Either --file-path or --folder-path must be provided")
+        return
     
     if not db_url:
         print("Error: DATABASE_URL environment variable not set")
         return
     
-    print(f"Processing {args.type} file in batches...")
-    process_meddra_file(args.file, args.type, db_url, args.version, args.language, args.batch_size)
+    if args.file_path:
+        print(f"Processing single file: {args.file_path}")
+        process_meddra_file(
+            file_path=args.file_path,
+            file_type=os.path.basename(args.file_path).split('.')[0],
+            db_url=db_url,
+            version=args.version,
+            language=args.language,
+            batch_size=args.batch_size
+        )
+        return
+    
+    print(f"Processing files in path: {args.folder_path}")
+    process_meddra_files(
+        folder_path=args.folder_path,
+        db_url=db_url,
+        version=args.version,
+        language=args.language,
+        batch_size=args.batch_size
+    )
 
 if __name__ == "__main__":
     main()

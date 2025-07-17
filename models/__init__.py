@@ -404,15 +404,26 @@ class MeddraRelease(Base):
         PrimaryKeyConstraint('id', name='meddra_release_pk'),
         Index('meddra_release_meddra_version_index', 'meddra_version')
     )
+    
+    __meddra_file_info__ = {
+        'filename': 'meddra_release.asc',
+        '_column_order': [
+            'meddra_version', 'language_version',
+            'null_field_a', 'null_field_b', 'null_field_c'
+        ]
+    }
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
     meddra_version: Mapped[str] = mapped_column(String(100))
     language_version: Mapped[str] = mapped_column(String(100))
+
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
     null_field_a: Mapped[Optional[str]] = mapped_column(String(100))
     null_field_b: Mapped[Optional[str]] = mapped_column(String(100))
     null_field_c: Mapped[Optional[str]] = mapped_column(String(100))
+
     language: Mapped[Optional[str]] = mapped_column(String(8))
     version: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric(5, 2))
 
@@ -425,10 +436,25 @@ class MeddraSmqContent(Base):
         Index('ix1_smq_content02', 'term_code'),
         Index('ix1_smq_content03', 'version')
     )
-
+    
+    __meddra_file_info__ = {
+        'filename': 'smq_content.asc',
+        '_column_order': [
+            'smq_code', 
+            'term_code',
+            'term_level', 
+            'term_scope',
+            'term_category',
+            'term_weight',
+            'term_status',
+            'term_addition_version',
+            'term_last_modified_version'
+        ]
+    }
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    smq_code: Mapped[int] = mapped_column(Integer)
-    term_code: Mapped[int] = mapped_column(Integer)
+
+    smq_code: Mapped[int] = mapped_column(BigInteger)
+    term_code: Mapped[int] = mapped_column(BigInteger)
     term_level: Mapped[int] = mapped_column(Integer)
     term_scope: Mapped[int] = mapped_column(Integer)
     term_category: Mapped[str] = mapped_column(String(1))
@@ -436,13 +462,14 @@ class MeddraSmqContent(Base):
     term_status: Mapped[str] = mapped_column(String(1))
     term_addition_version: Mapped[str] = mapped_column(String(5))
     term_last_modified_version: Mapped[str] = mapped_column(String(5))
+
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
     language: Mapped[Optional[str]] = mapped_column(String(8))
     version: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric(5, 2))
 
 
-class MeddraSmqList(Base): # Not working due a bug
+class MeddraSmqList(Base):
     __tablename__ = 'meddra_smq_list'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='meddra_smq_list_pk'),
@@ -470,13 +497,12 @@ class MeddraSmqList(Base): # Not working due a bug
     smq_name: Mapped[str] = mapped_column(String(100))
     smq_level: Mapped[int] = mapped_column(BigInteger)
     smq_description: Mapped[str] = mapped_column(Text)
-    smq_source: Mapped[str] = mapped_column(Text)
+    smq_source: Mapped[Optional[str]] = mapped_column(Text)
     smq_note: Mapped[Optional[str]] = mapped_column(Text)
     meddra_version: Mapped[str] = mapped_column(String(5))
     status: Mapped[str] = mapped_column(String(1))
     smq_algorithm: Mapped[str] = mapped_column(Text)
 
-    
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
     language: Mapped[Optional[str]] = mapped_column(String(8))
