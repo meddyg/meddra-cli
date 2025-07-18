@@ -84,6 +84,22 @@ The `config.py` file allows configuration of:
 - **Encoding**: Default 'UTF-8'
 - **Separator**: Default '$'
 
+### Database DDL
+
+### Database DDL
+
+This version requires your database tables to match the structure defined in `models.py`. Custom table structures are not supported yet.
+
+To create the necessary tables in your database, simply run:
+
+```bash
+python3 models.py
+```
+
+This will initialize your database with the correct schema for the loader to work properly.
+
+Ensure your database connection is correctly set up in the `.env` file before running this command.
+
 ## Usage
 
 ### Basic Commands
