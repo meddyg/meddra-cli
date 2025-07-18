@@ -234,7 +234,7 @@ Progress: 100% - Batch 15 (75000/75000 records) - Elapsed: 23.5s
 ✓ Successfully processed 75000 records
 ```
 
-### Example 4: Dry-run Mode
+<!-- ### Example 4: Dry-run Mode
 
 See what would be processed without actually processing:
 
@@ -254,7 +254,7 @@ Found 15 files to process:
   - hlt.asc (High Level Terms) - 1500 lines
   ...
 Total records that would be processed: 850000
-```
+``` -->
 
 ## Error Handling
 
@@ -388,7 +388,6 @@ python cli.py --path /data/meddra --verbose
 - Progress tracking
 - Error handling
 - CLI interface
-
 
 ## 🛡️ License
 

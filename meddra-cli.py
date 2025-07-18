@@ -85,11 +85,11 @@ class MedDRACLI:
         )
         
         # Additional options
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Show what would be processed without actually processing'
-        )
+        # parser.add_argument(
+        #     '--dry-run',
+        #     action='store_true',
+        #     help='Show what would be processed without actually processing'
+        # )
         parser.add_argument(
             '--verbose',
             action='store_true',
