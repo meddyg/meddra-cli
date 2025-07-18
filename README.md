@@ -126,23 +126,22 @@ python cli.py --path /path/to/files \
     --verbose
 ```
 
-#### Dry-run mode
+<!-- #### Dry-run mode
 
 ```bash
 python cli.py --path /path/to/files --dry-run
-```
+``` -->
 
 ## Command Line Options
 
-| Option         | Type   | Default | Description                                     |
-| -------------- | ------ | ------- | ----------------------------------------------- |
-| `--file-path`  | string | -       | Path to a specific MedDRA file                  |
-| `--path`       | string | -       | Directory containing .asc files                 |
-| `--version`    | float  | 28.0    | MedDRA version                                  |
-| `--language`   | string | en      | Language code                                   |
-| `--batch-size` | int    | 5000    | Batch size for processing                       |
-| `--dry-run`    | flag   | false   | Show what would be processed without processing |
-| `--verbose`    | flag   | false   | Enable detailed output                          |
+| Option         | Type   | Default | Description                     |
+| -------------- | ------ | ------- | ------------------------------- |
+| `--file-path`  | string | -       | Path to a specific MedDRA file  |
+| `--path`       | string | -       | Directory containing .asc files |
+| `--version`    | float  | 28.0    | MedDRA version                  |
+| `--language`   | string | en      | Language code                   |
+| `--batch-size` | int    | 5000    | Batch size for processing       |
+| `--verbose`    | flag   | false   | Enable detailed output          |
 
 ## Supported File Types
 
