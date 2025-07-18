@@ -1,12 +1,9 @@
-#TODO: Change Integer(10,2) to bigint
+from typing import List, Optional, ClassVar, Dict
 
-from typing import List, Optional, ClassVar, Dict, Any
-
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, REAL, Sequence, SmallInteger, String, Table, Text, Time, UniqueConstraint, Uuid, text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, MappedColumn
+from sqlalchemy import BigInteger, DateTime, Index, Integer, Numeric, PrimaryKeyConstraint,  String, Text, text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 import datetime
 import decimal
-import uuid
 
 EXCLUDED_COLUMNS = {'id', 'language', 'version', 'created_at', 'updated_at'}
 
@@ -645,6 +642,12 @@ def generate_meddra_file_mappings():
     return mappings
 
 if __name__ == "__main__":
-    MEDDRA_FILE_MAPPINGS = generate_meddra_file_mappings()
+    from config import DatabaseConfig
+    from sqlalchemy import create_engine
 
-    print(MEDDRA_FILE_MAPPINGS)
+    # Carga la configuración de la base de datos desde las variables de entorno
+    db_config = DatabaseConfig.from_env()
+    engine = create_engine(db_config.url)
+
+    # Crea todas las tablas definidas en los modelos si no existen
+    Base.metadata.create_all(engine)

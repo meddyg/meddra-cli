@@ -1,166 +1,220 @@
-import os
 import argparse
-import pandas as pd
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
-from datetime import datetime
-import traceback
-import numpy as np
+import sys
+from typing import List, Optional
+from config import AppConfig
+from database.connection import DatabaseManager
+from core.file_processor import FileProcessor
+from utils.file_utils import find_meddra_files, get_file_type_from_path
+from exceptions import MedDRAProcessingError, InvalidConfigurationError
 
-from models import generate_meddra_file_mappings
-
-load_dotenv()
-
-MEDDRA_FILE_MAPPINGS = generate_meddra_file_mappings()
-
-def process_meddra_files(folder_path: str, db_url: str, version: float, language: str, batch_size: int = 5000):
-    for file_name in os.listdir(folder_path):
-        if file_name.endswith('.asc'):
-            file_path = os.path.join(folder_path, file_name)
-
-            process_meddra_file(
-                file_path=file_path,
-                file_type=file_name,
-                db_url=db_url,
-                version=version,
-                language=language,
-                batch_size=batch_size
-            )
-
-def process_meddra_file(
-    file_path: str, 
-    file_type: str,
-    db_url: str, 
-    version: float,
-    language: str,
-    batch_size=5000
-):
-    """
-    Processes and loads a MedDRA-formatted file into a database in batches.
-    Args:
-        file_path (str): Path to the MedDRA file to be processed.
-        file_type (str): Type of MedDRA file (must be a key in MEDDRA_FILE_MAPPINGS).
-        db_url (str): SQLAlchemy-compatible database URL for data insertion.
-        version (float): MedDRA version to associate with the records.
-        language (str): Language code for the records.
-        batch_size (int, optional): Number of records to process per batch. Defaults to 5000.
-    Returns:
-        None
-    Raises:
-        Prints error messages for unsupported file types or batch loading errors.
-        Raises and prints traceback for exceptions during batch processing.
-    """
-    if file_type not in MEDDRA_FILE_MAPPINGS:
-        print(f"Error: Unsupported file type '{file_type}'")
-        return
+class MedDRACLI:
+    """Command Line Interface for MedDRA file processing."""
     
-    mapping = MEDDRA_FILE_MAPPINGS[file_type]
-    model_class = mapping['model']
-    columns = mapping['columns']
+    def __init__(self):
+        self.config = None
+        self.db_manager = None
+        self.file_processor = None
     
-    engine = create_engine(db_url)
-    Session = sessionmaker(bind=engine)
-    
-    with open(file_path, 'r', encoding='latin1') as f:
-        total_lines = sum(1 for _ in f)
-    
-    batch_count = 0
-    records_count = 0
-    
-    for df_chunk in pd.read_csv(
-        file_path, 
-        sep='$', 
-        names=columns,
-        on_bad_lines='skip',
-        encoding='latin1',
-        chunksize=batch_size,
-        index_col=False,
-    ):
-        df_chunk = df_chunk.replace({np.nan: None})
-        
-        batch_count += 1
-        
-        for col in df_chunk.columns:
-            if df_chunk[col].dtype == 'object':
-                df_chunk[col] = df_chunk[col].apply(lambda x: None if pd.isna(x) or x == '' else x)
-        
-        df_chunk['created_at'] = datetime.now()
-        df_chunk['updated_at'] = datetime.now()
-        df_chunk['language'] = language
-        df_chunk['version'] = version
-        
-        session = Session()
+    def run(self) -> int:
+        """Main entry point for the CLI."""
         try:
-            records = []
-            for _, row in df_chunk.iterrows():
-                record_data = {col: row[col] for col in columns if col in row}
-
-                record_data.update({
-                    'created_at': row['created_at'],
-                    'updated_at': row['updated_at'],
-                    'language': row['language'],
-                    'version': row['version']
-                })
-                record = model_class(**record_data)
-                records.append(record)
+            args = self._parse_arguments()
+            self._initialize_components(args)
+            self._validate_setup()
             
-            session.bulk_save_objects(records)
-            session.commit()
-            records_count += len(records)
-            
-            progress = min(100, int((batch_count * batch_size / total_lines) * 100))
-            print(f"Progress: {progress}% - Loaded batch {batch_count} ({records_count} records so far)")
-            
+            if args.file_path:
+                return self._process_single_file(args.file_path)
+            else:
+                return self._process_directory(args.path)
+                
+        except MedDRAProcessingError as e:
+            print(f"Processing error: {e}")
+            return 1
         except Exception as e:
-            session.rollback()
-            print(f"Error loading batch {batch_count}: {e}")
-            raise traceback.format_exc()
-        
+            print(f"Unexpected error: {e}")
+            return 1
         finally:
-            session.close()
+            self._cleanup()
     
-    print(f"Finished loading {records_count} {file_type} records")
+    def _parse_arguments(self) -> argparse.Namespace:
+        """Parses command line arguments."""
+        parser = argparse.ArgumentParser(
+            description='Load MedDRA files into the database',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="""
+                Examples:
+                # Process a single file
+                python cli.py --file-path /path/to/file.asc
+                
+                # Process all files in a directory
+                python cli.py --path /path/to/meddra/files
+                
+                # Process with custom settings
+                python cli.py --path /path/to/files --version 27.1 --language es --batch-size 1000
+                            """
+        )
+        
+        # File/directory options (mutually exclusive)
+        file_group = parser.add_mutually_exclusive_group(required=True)
+        file_group.add_argument(
+            '--file-path',
+            help='Path to a specific MedDRA file to process'
+        )
+        file_group.add_argument(
+            '--path',
+            help='Directory containing MedDRA .asc files'
+        )
+        
+        # Processing options
+        parser.add_argument(
+            '--version',
+            type=float,
+            default=28.0,
+            help='MedDRA version (default: 28.0)'
+        )
+        parser.add_argument(
+            '--language',
+            default='en',
+            help='Language code (default: en)'
+        )
+        parser.add_argument(
+            '--batch-size',
+            type=int,
+            default=5000,
+            help='Batch size for processing (default: 5000)'
+        )
+        
+        # Additional options
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Show what would be processed without actually processing'
+        )
+        parser.add_argument(
+            '--verbose',
+            action='store_true',
+            help='Enable verbose output'
+        )
+        
+        return parser.parse_args()
+    
+    def _initialize_components(self, args: argparse.Namespace) -> None:
+        """Initializes application components."""
+        try:
+            # Create configuration
+            self.config = AppConfig.from_env(
+                version=args.version,
+                language=args.language,
+                batch_size=args.batch_size
+            )
+            
+            # Initialize database manager
+            self.db_manager = DatabaseManager(self.config.database)
+            
+            # Initialize file processor
+            self.file_processor = FileProcessor(self.db_manager, self.config.processing)
+            
+            if args.verbose:
+                print("Configuration loaded successfully:")
+                print(f"  Database URL: {self.config.database.url}")
+                print(f"  Version: {self.config.processing.version}")
+                print(f"  Language: {self.config.processing.language}")
+                print(f"  Batch size: {self.config.processing.batch_size}")
+                
+        except Exception as e:
+            raise InvalidConfigurationError(f"Failed to initialize components: {e}")
+    
+    def _validate_setup(self) -> None:
+        """Validates that the setup is correct."""
+        if not self.db_manager.test_connection():
+            raise MedDRAProcessingError("Database connection test failed")
+        
+        print("Setup validation passed")
+    
+    def _process_single_file(self, file_path: str) -> int:
+        """Processes a single file."""
+        print(f"Processing single file: {file_path}")
+        
+        file_type = get_file_type_from_path(file_path)
+        if not self.file_processor.is_file_type_supported(file_type):
+            supported_types = self.file_processor.get_supported_file_types()
+            print(f"Error: Unsupported file type '{file_type}'")
+            print(f"Supported types: {', '.join(supported_types)}")
+            return 1
+        
+        result = self.file_processor.process(file_path)
+        
+        if result.success:
+            print(f"Successfully processed {result.records_processed} records")
+            return 0
+        else:
+            print(f"Failed to process file: {result.error}")
+            return 1
+    
+    def _process_directory(self, directory_path: str) -> int:
+        """Processes all files in a directory."""
+        print(f"Processing files in directory: {directory_path}")
+        
+        try:
+            files = find_meddra_files(directory_path)
+            if not files:
+                print("No .asc files found in the directory")
+                return 0
+            
+            print(f"Found {len(files)} files to process")
+            
+            total_records = 0
+            processed_files = 0
+            failed_files = []
+            
+            for file_path in files:
+                file_type = get_file_type_from_path(file_path)
+                
+                if not self.file_processor.is_file_type_supported(file_type):
+                    print(f"Skipping unsupported file type: {file_type}")
+                    continue
+                
+                print(f"\n--- Processing {file_path} ---")
+                result = self.file_processor.process(file_path)
+                
+                if result.success:
+                    total_records += result.records_processed
+                    processed_files += 1
+                    print(f"✓ Successfully processed {result.records_processed} records")
+                else:
+                    failed_files.append((file_path, result.error))
+                    print(f"✗ Failed to process: {result.error}")
+            
+            # Summary
+            print(f"\n=== Processing Summary ===")
+            print(f"Total files processed: {processed_files}/{len(files)}")
+            print(f"Total records processed: {total_records}")
+            
+            if failed_files:
+                print(f"Failed files ({len(failed_files)}):")
+                for file_path, error in failed_files:
+                    print(f"  - {file_path}: {error}")
+                return 1
+            else:
+                print("All files processed successfully!")
+                return 0
+                
+        except Exception as e:
+            print(f"Error processing directory: {e}")
+            return 1
+    
+    def _cleanup(self) -> None:
+        """Cleans up resources."""
+        if self.db_manager:
+            self.db_manager.close()
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Load MedDRA files into the database')
-    parser.add_argument('--file-path', required=False, help='Path to the MedDRA file to be processed. Optional if you want to process specific files.')
-    parser.add_argument('--folder-path', required=False, help='Path where .asc files are located')
-    parser.add_argument('--version', type=float, default=28.0, help='MedDRA version (default: 28.0)')
-    parser.add_argument('--language', default='en', help='Language code (default: en)')
-    parser.add_argument('--batch-size', type=int, default=5000, help='Batch size for processing (default: 5000)')
-    
-    args = parser.parse_args()
-    db_url = os.getenv("DATABASE_URL")
-    
-    if not args.file_path and not args.folder_path:
-        print("Error: Either --file-path or --folder-path must be provided")
-        return
-    
-    if not db_url:
-        print("Error: DATABASE_URL environment variable not set")
-        return
-    
-    if args.file_path:
-        print(f"Processing single file: {args.file_path}")
-        process_meddra_file(
-            file_path=args.file_path,
-            file_type=os.path.basename(args.file_path).split('.')[0],
-            db_url=db_url,
-            version=args.version,
-            language=args.language,
-            batch_size=args.batch_size
-        )
-        return
-    
-    print(f"Processing files in path: {args.folder_path}")
-    process_meddra_files(
-        folder_path=args.folder_path,
-        db_url=db_url,
-        version=args.version,
-        language=args.language,
-        batch_size=args.batch_size
-    )
+    """Main entry point."""
+    cli = MedDRACLI()
+    exit_code = cli.run()
+    sys.exit(exit_code)
+
 
 if __name__ == "__main__":
     main()
