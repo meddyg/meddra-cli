@@ -388,3 +388,18 @@ python cli.py --path /data/meddra --verbose
 - Progress tracking
 - Error handling
 - CLI interface
+
+
+## 🛡️ License
+
+This project is licensed under the [MIT License](LICENSE).
+
+### 📚 About MedDRA®
+
+This software requires structured data from the MedDRA® dictionary, which is the property of the MSSO (Maintenance and Support Services Organization) and the ICH.
+
+**⚠️ This repository does not distribute or include any MedDRA® files.**
+
+To use `meddra-cli`, you must have a valid MedDRA license and download the official files from: [https://www.meddra.org](https://www.meddra.org)
+
+This software is not affiliated with or endorsed by the MSSO or ICH.
