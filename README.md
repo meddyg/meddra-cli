@@ -86,8 +86,6 @@ The `config.py` file allows configuration of:
 
 ### Database DDL
 
-### Database DDL
-
 This version requires your database tables to match the structure defined in `models.py`. Custom table structures are not supported yet.
 
 To create the necessary tables in your database, simply run:
