@@ -41,15 +41,37 @@ def get_file_type_from_path(file_path: str) -> str:
     """Extracts file type from file path."""
     return Path(file_path).stem + Path(file_path).suffix.lower()
 
-def count_file_lines(file_path: str, encoding: str = 'UTF-8') -> int:
-    """Counts the number of lines in a file."""
+def count_file_lines(file_path: str, encodings: List[str] = ['iso-8859-1', 'latin1', 'utf-8', 'cp1252']) -> int:
+    """
+    Counts the number of lines in a file trying different encodings.
+    
+    Args:
+        file_path: Path to the file
+        encodings: List of encodings to try, in order of preference. For Spanish MedDRA files,
+                  'iso-8859-1' or 'latin1' should be tried first.
+    """
     validate_file_path(file_path)
     
-    try:
-        with open(file_path, 'r', encoding=encoding) as f:
-            return sum(1 for _ in f)
-    except Exception as e:
-        raise FileProcessingError(file_path, e)
+    last_error = None
+    for encoding in encodings:
+        try:
+            with open(file_path, 'r', encoding=encoding) as f:
+                return sum(1 for _ in f)
+        except UnicodeDecodeError as e:
+            last_error = e
+            print(f"Failed to decode with {encoding}, trying next encoding...")
+            continue
+        except Exception as e:
+            raise FileProcessingError(file_path, e)
+            
+    # If we get here, none of the encodings worked
+    raise FileProcessingError(
+        file_path,
+        last_error or UnicodeDecodeError(
+            'utf-8', b'', 0, 1,
+            f"Could not decode file with any of these encodings: {', '.join(encodings)}"
+        )
+    )
 
 def get_file_info(file_path: str) -> dict:
     """Gets basic information about a file."""

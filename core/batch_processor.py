@@ -13,7 +13,6 @@ class BatchProcessor(BaseProcessor):
             
             with self.db_manager.session_scope() as session:
                 session.bulk_save_objects(records)
-                # Commit happens automatically due to session_scope
             
             return ProcessorResult(
                 success=True,
@@ -33,7 +32,6 @@ class BatchProcessor(BaseProcessor):
         records = []
         
         for _, row in df.iterrows():
-            # Get the original column names (without metadata)
             original_columns = [col for col in df.columns if col not in 
                               ['created_at', 'updated_at', 'language', 'version']]
             

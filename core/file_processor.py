@@ -93,21 +93,43 @@ class FileProcessor(BaseProcessor):
             self._log_error(f"Processing {file_path}", e)
             return ProcessorResult(success=False, error=e)
     
+    def _detect_encoding(self, file_path: str) -> str:
+        """Tests different encodings and returns the first one that works."""
+        encodings = ['utf-8', 'latin1','iso-8859-1' 'cp1252']
+        
+        for encoding in encodings:
+            try:
+                # Just try to read the first line
+                with open(file_path, 'r', encoding=encoding) as f:
+                    f.readline()
+                    return encoding
+            except UnicodeDecodeError:
+                print(f"Failed to decode with {encoding}, trying next encoding...")
+                continue
+        
+        raise FileProcessingError(
+            file_path,
+            f"Could not decode file with any of these encodings: {', '.join(encodings)}"
+        )
+    
     def _read_file_chunks(self, file_path: str, columns: List[str]):
         """Reads file in chunks using pandas."""
         try:
+            encoding = self._detect_encoding(file_path)
+            print(f"Using encoding: {encoding}")
+            
             return pd.read_csv(
                 file_path,
                 sep=self.config.separator,
                 names=columns,
                 on_bad_lines='skip',
-                encoding=self.config.encoding,
+                encoding=encoding,
                 chunksize=self.config.batch_size,
                 index_col=False,
             )
         except Exception as e:
             raise FileProcessingError(file_path, e)
-    
+
     def _preprocess_chunk(self, df_chunk: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
         """Preprocesses a data chunk."""
         # Replace NaN with None

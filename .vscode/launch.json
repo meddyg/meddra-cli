@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "MedDRA CLI - Process Directory",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/meddra-cli.py",
+            "args": [
+                "--path",
+                "/home/juanes/Downloads/MedDRA_28_0_Spanish/ascii-280",
+                "--version",
+                "28",
+                "--language",
+                "es",
+                "--batch-size",
+                "20000",
+                "--verbose"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        }
+    ]
+}

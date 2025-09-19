@@ -1,4 +1,4 @@
-from typing import List, Optional, ClassVar, Dict
+from typing import Any, List, Optional, ClassVar, Dict
 
 from sqlalchemy import BigInteger, DateTime, Index, Integer, Numeric, PrimaryKeyConstraint,  String, Text, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -8,7 +8,7 @@ import decimal
 EXCLUDED_COLUMNS = {'id', 'language', 'version', 'created_at', 'updated_at'}
 
 class Base(DeclarativeBase):
-    pass
+    __table_args__: Dict[str, Any] = {'schema': 'meddra' }
 
 class MeddraChangesMeddraToSnomed(Base):
     __tablename__ = 'meddra_changes_meddra_to_snomed'
@@ -648,6 +648,10 @@ if __name__ == "__main__":
     # Carga la configuración de la base de datos desde las variables de entorno
     db_config = DatabaseConfig.from_env()
     engine = create_engine(db_config.url)
+
+    with engine.connect() as conn:
+        conn.execute(text('CREATE SCHEMA IF NOT EXISTS meddra'))
+        conn.commit()
 
     # Crea todas las tablas definidas en los modelos si no existen
     Base.metadata.create_all(engine)
