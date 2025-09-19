@@ -16,7 +16,7 @@ A robust tool for loading MedDRA files into a database with batch processing sup
 ```
 meddra_loader/
 ├── __init__.py
-├── cli.py                    # CLI entry point
+├── meddra-cli.py                    # CLI entry point
 ├── config.py                 # Configuration and environment variables
 ├── exceptions.py             # Custom exceptions
 ├── models.py                 # Database models (existing)
@@ -105,19 +105,19 @@ Ensure your database connection is correctly set up in the `.env` file before ru
 #### Process a single file
 
 ```bash
-python cli.py --file-path /path/to/file.asc
+python meddra-cli.py --file-path /path/to/file.asc
 ```
 
 #### Process all files in a directory
 
 ```bash
-python cli.py --path /path/to/meddra/files
+python meddra-cli.py --path /path/to/meddra/files
 ```
 
 #### Custom configuration
 
 ```bash
-python cli.py --path /path/to/files \
+python meddra-cli.py --path /path/to/files \
     --version 27.1 \
     --language es \
     --batch-size 1000 \
@@ -127,7 +127,7 @@ python cli.py --path /path/to/files \
 <!-- #### Dry-run mode
 
 ```bash
-python cli.py --path /path/to/files --dry-run
+python meddra-cli.py --path /path/to/files --dry-run
 ``` -->
 
 ## Command Line Options
@@ -160,7 +160,7 @@ Supported file types are defined in `models.py` through the `generate_meddra_fil
 Process all MedDRA files in the standard directory:
 
 ```bash
-python cli.py --path /data/meddra/28.0/MedAscii
+python meddra-cli.py --path /data/meddra/28.0/MedAscii
 ```
 
 **Output:**
@@ -191,7 +191,7 @@ All files processed successfully!
 Process files with specific version and language:
 
 ```bash
-python cli.py --path /data/meddra/27.1/MedAscii \
+python meddra-cli.py --path /data/meddra/27.1/MedAscii \
     --version 27.1 \
     --language es \
     --batch-size 2000 \
@@ -216,7 +216,7 @@ Processing files in directory: /data/meddra/27.1/MedAscii
 Process only the Preferred Terms file:
 
 ```bash
-python cli.py --file-path /data/meddra/28.0/MedAscii/pt.asc
+python meddra-cli.py --file-path /data/meddra/28.0/MedAscii/pt.asc
 ```
 
 **Output:**
@@ -231,28 +231,6 @@ Progress: 100% - Batch 15 (75000/75000 records) - Elapsed: 23.5s
 ✓ Successfully processed 75000 records
 ```
 
-<!-- ### Example 4: Dry-run Mode
-
-See what would be processed without actually processing:
-
-```bash
-python cli.py --path /data/meddra/28.0/MedAscii --dry-run
-```
-
-**Output:**
-
-```
-DRY RUN MODE - No data will be processed
-Setup validation passed
-Processing files in directory: /data/meddra/28.0/MedAscii
-Found 15 files to process:
-  - pt.asc (Preferred Terms) - 75000 lines
-  - llt.asc (Lowest Level Terms) - 120000 lines
-  - hlt.asc (High Level Terms) - 1500 lines
-  ...
-Total records that would be processed: 850000
-``` -->
-
 ## Error Handling
 
 The application handles various types of errors gracefully:
@@ -260,28 +238,28 @@ The application handles various types of errors gracefully:
 ### Configuration Errors
 
 ```bash
-$ python cli.py --path /data/meddra
+$ python meddra-cli.py --path /data/meddra
 Processing error: DATABASE_URL environment variable not set
 ```
 
 ### File Errors
 
 ```bash
-$ python cli.py --file-path /nonexistent/file.asc
+$ python meddra-meddra-cli.py --file-path /nonexistent/file.asc
 Processing error: Error processing file '/nonexistent/file.asc': File not found
 ```
 
 ### Database Errors
 
 ```bash
-$ python cli.py --path /data/meddra
+$ python meddra-meddra-cli.py --path /data/meddra
 Processing error: Database connection test failed
 ```
 
 ### Unsupported File Types
 
 ```bash
-$ python cli.py --file-path /data/unknown_file.asc
+$ python meddra-meddra-cli.py --file-path /data/unknown_file.asc
 Error: Unsupported file type 'unknown_file'
 Supported types: pt, llt, hlt, hlgt, soc, smq_list, mdhier, intl_ord
 ```
@@ -364,7 +342,7 @@ def new_utility_function(param):
 Enable verbose logging for troubleshooting:
 
 ```bash
-python cli.py --path /data/meddra --verbose
+python meddra-cli.py --path /data/meddra --verbose
 ```
 
 ## Performance Optimization
