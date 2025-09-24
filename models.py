@@ -271,19 +271,19 @@ class MeddraMapMeddraToSnomed(Base):
     __table_args__ = (
         PrimaryKeyConstraint('id', name='meddra_map_meddra_to_snomed_pk'),
         Index('meddra_map_meddra_to_snomed_meddra_code_index', 'meddra_code'),
-        Index('meddra_map_meddra_to_snomed_snomed_ct_code_index', 'snomed_ct_code'),
-        Index('meddra_map_meddra_to_snomed_version_index', 'version')
+        Index('meddra_map_meddra_to_snomed_snomed_ct_code_index', 'snomed_ct_code')
+        #Index('meddra_map_meddra_to_snomed_version_index', 'version')
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    meddra_code: Mapped[int] = mapped_column(Integer)
-    meddra_llt: Mapped[str] = mapped_column(String(100))
-    snomed_ct_code: Mapped[int] = mapped_column(Integer)
+    meddra_code: Mapped[str] = mapped_column(String(20))
+    # meddra_llt: Mapped[str] = mapped_column(String(100))
+    snomed_ct_code: Mapped[str] = mapped_column(String(20))
+    # snomed_ct_fsn: Mapped[Optional[str]] = mapped_column(String(100))
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
-    snomed_ct_fsn: Mapped[Optional[str]] = mapped_column(String(100))
-    language: Mapped[Optional[str]] = mapped_column(String(8))
-    version: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric(5, 2))
+    # language: Mapped[Optional[str]] = mapped_column(String(8))
+    # version: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric(5, 2))
 
 
 class MeddraMapSnomedToMeddra(Base):
@@ -291,19 +291,19 @@ class MeddraMapSnomedToMeddra(Base):
     __table_args__ = (
         PrimaryKeyConstraint('id', name='meddra_map_snomed_to_meddra_pk'),
         Index('meddra_map_snomed_to_meddra_meddra_code_index', 'meddra_code'),
-        Index('meddra_map_snomed_to_meddra_snomed_ct_code_index', 'snomed_ct_code'),
-        Index('meddra_map_snomed_to_meddra_version_index', 'version')
+        Index('meddra_map_snomed_to_meddra_snomed_ct_code_index', 'snomed_ct_code')
+        #Index('meddra_map_snomed_to_meddra_version_index', 'version')
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    snomed_ct_code: Mapped[int] = mapped_column(Integer)
-    meddra_code: Mapped[int] = mapped_column(Integer)
-    meddra_llt: Mapped[str] = mapped_column(String(100))
+    snomed_ct_code: Mapped[str] = mapped_column(String(20))
+    # snomed_ct_fsn: Mapped[Optional[str]] = mapped_column(String(100))
+    meddra_code: Mapped[str] = mapped_column(String(20))
+    # meddra_llt: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), server_default=text('now()'))
-    snomed_ct_fsn: Mapped[Optional[str]] = mapped_column(String(100))
-    language: Mapped[Optional[str]] = mapped_column(String(8))
-    version: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric(5, 2))
+    # language: Mapped[Optional[str]] = mapped_column(String(8))
+    # version: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric(5, 2))
 
 
 class MeddraMdHierarchy(Base):
@@ -654,4 +654,5 @@ if __name__ == "__main__":
         conn.commit()
 
     # Crea todas las tablas definidas en los modelos si no existen
-    Base.metadata.create_all(engine)
+    Base.metadata.drop_all(engine)  # Drop all tables first
+    Base.metadata.create_all(engine)  # Recreate all tables
